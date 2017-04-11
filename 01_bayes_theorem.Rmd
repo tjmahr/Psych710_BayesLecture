@@ -1,0 +1,333 @@
+---
+title: "Bayesian regression"
+author: "Tristan Mahr"
+date: "April 13, 2017"
+output:
+  beamer_presentation:
+    toc: no
+    theme: "Metropolis"
+    latex_engine: pdflatex
+  github_document: default
+  ioslides_presentation: default
+subtitle: subtitle
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  comment = "#>",
+  collapse = TRUE)
+```
+
+## Overview
+
+* A little about me and how I got into Bayes
+* Bayes theorem as a way to unify all of statistics
+* A simple regression model
+* Things to do with posteriors
+* Where to learn more
+
+# Background
+
+## About me 
+
+* I am dissertator in Communication Sciences and Disorders
+* I study word recognition in preschoolers
+* For stats, I do multilevel logistic regression models
+* R enthusiast
+
+## I was once in your shoes
+
+I learned stats and R in this course with Markus Brauer and John Curtin.
+
+I _still_ refer to the slides from this course on contrast codes.
+
+But now I'm a "Bayesian"
+
+
+## August 2015: The "Crisis" in Psychology
+
+[Open Science Collaboration (2015)][osf2015] tries to replicate 100 studies
+published in 3 psychology different journals in 2008.
+
+- Boil a study down to 1 test statistic and 1 effect size.
+- Replicate the study.
+- Compare replication's test statistical and effect size against original.
+
+----
+
+![Scatter plot of original vs replicated effect sizes](./assets/reproducibility.PNG)
+
+----
+
+- Approximately 36% of the studies are replicated (same test statistic.
+- On average, effect sizes in replications are half that of the original
+  studies.
+
+
+
+## Reactions
+
+![I don't know how to turn off the figure labeling feature](./assets/this-is-fine.jpeg)
+
+
+## Reactions
+
+> * We're doomed.
+> * Most findings are probably false.
+> * No, this is business as usual.
+> * Any credible discipline has to do this kind of house-cleaning from time to time.
+
+
+
+
+## Lots of hand wringing and soul searching
+
+Some reactionary:
+
+- Replication creates an [industry for incompetent hacks][replication-hacks].
+- Here come the [methodological terrorists][method-terrorists]!
+
+Some constructive:
+
+- [Everything is f'ed][everything-fucked] -- so what else is new?
+- Increased rigor and openness are [a good thing][repeat-after-me].
+
+[replication-hacks]: http://www.sciencedirect.com/science/article/pii/S002210311600007X
+[method-terrorists]: http://andrewgelman.com/2016/09/21/what-has-happened-down-here-is-the-winds-have-changed/
+[everything-fucked]: https://hardsci.wordpress.com/2016/08/11/everything-is-fucked-the-syllabus/
+[repeat-after-me]: https://thenib.com/repeat-after-me
+
+
+
+## Crisis made me think more about questionable practices
+
+All those unintentional acts and rituals to appease the Statistical Significance
+gods.
+
+HARKing 
+~ Hypothesizing after results are known.
+~ Telling a story to fit the data.
+
+Garden of forking data
+~ Conducting countless sub-tests and sub-analyses on the data.
+
+_p_-hacking
+~ Doing these tests in order to find a significant effect.
+
+Selective reporting
+~ Reporting only the tests that yielded a significant result.
+
+----
+
+The usual way of doing things is _insecure_.
+
+----
+
+
+The usual way of doing things is _insecure_.
+
+- Perfectly fine if you know what you're doing.
+- But vulnerable to exploitation.
+
+
+----
+
+## My response to the crisis
+
+
+I want to avoid these traps.
+
+I want to level up my stats and explore new techniques.
+
+- Maybe more robust estimation techniques?
+- Maybe machine learning techniques to complement conventional analyses?
+
+I want something less finicky than statistical significance.
+
+- _p_-values don't mean what many people think they mean.
+- Neither do confidence intervals.
+- Statistical significance is not related to practical significance.
+
+
+
+## December 2015
+
+![Cover of Data Analysis USing Regression and Multilevel/Hierarchical Models](./assets/arm.jpeg)
+
+---
+
+I started reading the Gelman and Hill book.
+
+- This is the book for [the `arm` package][arm].
+- Still the best treatment of multilevel models in R despite being 10 years old.
+
+It emphasizes estimation, uncertainty and simulation.
+
+Midway through, the book pivots to Bayesian estimation.
+
+[arm]: https://cran.rstudio.com/web/packages/arm/
+
+
+## January 2016
+
+I'm down a rabbit hole, writing Stan (Bayesian) models to fit the models from the ARM
+book, and there is an influx of Bayesian tools for R.
+
+- [Statistical Rethinking][rethinking], a book that reteaches regression from a
+  Bayesian perspective with R and Stan, is released.
+- New version of [brms][brms] is released. This package converts R model code
+  into Stan programs.
+- [RStanARM][rstanarm] is released.
+- A blog post circulates: ["R Users Will Now Inevitably Become Bayesians"]
+  [we-r-bayesians].
+
+I eat all this up. I become a convert.
+
+[rethinking]: http://xcelab.net/rm/statistical-rethinking/
+[brms]: https://cran.r-project.org/web/packages/brms/index.html
+[rstanarm]: https://cran.r-project.org/web/packages/rstanarm/index.html
+[we-r-bayesians]: https://thinkinator.com/2016/01/12/r-users-will-now-inevitably-become-bayesians/
+
+
+
+## Long story short
+
+The replication crisis sparked my curiosity, and a wave of new tools and
+resources made it really easy to get started with Bayesian stats.
+
+My goal with this approach has been to make better, more honest scientific
+summaries of observed data.
+
+
+
+
+
+
+# Building mathematical intuitions
+
+
+## Caveat
+
+* These slides and these examples are meant to illustrate the pieces of Bayes
+  theorem.
+* This is not a rigorous mathematical description of Bayesian probability
+  or regression.
+
+## Conditional probability review
+
+$$ p(A \mid B) : \text{probability of A given B}$$
+
+Suppose that 95% of emails with the phrase "investment opportunity" are spam.
+
+$$ p(\text{spam email} \mid \text{"investment opportunity"})  = .95 $$
+
+
+----
+
+What would this probability express?
+
+$$ p(\text{"investment opportunity"} \mid \text{spam email})$$
+
+----
+
+
+## Bayes theorem
+
+A theorem about conditional probability.
+
+$$ p(B \mid A) = \frac{ p(A \mid B) \cdot p(B)}{p(A)} $$
+
+----
+
+I can never remember this equation. Here's how I prefer to write it.
+
+$$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) \cdot p(\text{hypothesis})}{p(\text{data})} $$
+
+The "hypothesis" is typically something unobserved or unknown. It's what you want to learn about it.
+
+Bayes theorem tells you the probability of the hypothesis given the data.
+
+
+## General structure
+
+How plausible is some hypothesis given the data?
+
+$$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
+
+Pieces of the equation:
+
+$$ \text{posterior} = \frac{ \text{likelihood} * \text{prior}}{\text{average\ likelihood}} $$
+
+
+
+
+
+## Classifying emails
+
+I got an email with the word "cialis" in it. Is it spam?
+
+What I want to know is ham-ness versus ham-ness. 
+
+What I have is an email with the word "cialis".
+
+$$ P(\text{spam} \mid \text{"cialis"}) = \frac{ P(\text{"cialis"} \mid \text{spam}) \, P(\text{spam})}{P(\text{"cialis"})} $$
+
+
+## Email example
+
+The two unconditional probabilities are base rates that need to be accounted for.
+
+The prior is the frequency of spam in general. The average likelihood is the frequency of the word "cialis" in emails.
+
+$$ P(\text{spam} \mid \text{"cialis"}) = \frac{\text{"cialis"\ freq.\ in\ spam} \, * \text{spam\ rate}}{\text{"cialis"\ freq.}} $$
+
+
+----
+
+Some people would argue that using Bayes theorem is not "Bayesian". After
+all, in this example, we're just counting the frequency of events. 
+
+It's kind of weird. But here's the difference.
+
+--------
+
+
+## The "Bayesianism" form of Bayes' theorem
+
+$$ \text{updated information} = \frac{\text{likelihood of data} * \text{prior information}}{\text{average\ likelihood of data}} $$
+
+Bayes' theorem provides a systematic way to update our knowledge as we encounter new data.
+
+$$ \text{updated beliefs} \propto \text{likelihood of data} * \text{prior beliefs} $$
+
+- Update your beliefs in proportion to how well the data fits those beliefs.
+- Your beliefs have probabilities. You can quantify your uncertainty about what you know.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[osf2015]: http://science.sciencemag.org/content/349/6251/aac4716
+
+
