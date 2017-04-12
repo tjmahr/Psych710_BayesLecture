@@ -4,19 +4,35 @@ author: "Tristan Mahr"
 date: "April 13, 2017"
 output:
   beamer_presentation:
-    toc: no
-    theme: "Metropolis"
+    includes:
+      in_header: header.txt
     latex_engine: pdflatex
+    theme: Metropolis
+    toc: no
   github_document: default
   ioslides_presentation: default
 subtitle: subtitle
 ---
 
 ```{r setup, include = FALSE}
+options(width = 60)
+knitr::opts_knit$set(width = 60)
+
 knitr::opts_chunk$set(
   echo = FALSE,
   comment = "#>",
   collapse = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(extrafont)
+library(hrbrthemes)
+
+extrafont::loadfonts()
+
+my_theme <- theme_ipsum(base_size = 24, axis_title_size = 20)
+
+theme_set(my_theme)
 ```
 
 ## Overview
@@ -214,39 +230,58 @@ summaries of observed data.
 * This is not a rigorous mathematical description of Bayesian probability
   or regression.
 
+
 ## Conditional probability review
 
 $$ p(A \mid B) : \text{probability of A given B}$$
 
+. . .
+
 Suppose that 95% of emails with the phrase "investment opportunity" are spam.
+
+. . .
 
 $$ p(\text{spam email} \mid \text{"investment opportunity"})  = .95 $$
 
 
-----
+## Conditional probability review
 
 What would this probability express?
 
 $$ p(\text{"investment opportunity"} \mid \text{spam email})$$
 
-----
+. . .
+
+That ordering matters. $p(A \mid B)$ is not the same as $p(B \mid A)$.
+
+
 
 
 ## Bayes theorem
 
 A theorem about conditional probability.
 
-$$ p(B \mid A) = \frac{ p(A \mid B) \cdot p(B)}{p(A)} $$
+$$ p(B \mid A) = \frac{ p(A \mid B) * p(B)}{p(A)} $$
 
 ----
 
-I can never remember this equation. Here's how I prefer to write it.
+I can never remember this equation with letters. Here's how I prefer to write it.
 
-$$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) \cdot p(\text{hypothesis})}{p(\text{data})} $$
+$$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
 
-The "hypothesis" is typically something unobserved or unknown. It's what you want to learn about it.
+---
+
+$$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
+
+The "hypothesis" is typically something unobserved or unknown. It's what you 
+want to learn about using the data. 
+
+
+For regression models, the "hypothesis" is a parameter (intercept, slopes or 
+error terms).
 
 Bayes theorem tells you the probability of the hypothesis given the data.
+
 
 
 ## General structure
@@ -255,40 +290,48 @@ How plausible is some hypothesis given the data?
 
 $$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
 
+. . .
+
 Pieces of the equation:
 
 $$ \text{posterior} = \frac{ \text{likelihood} * \text{prior}}{\text{average\ likelihood}} $$
-
-
-
 
 
 ## Classifying emails
 
 I got an email with the word "cialis" in it. Is it spam?
 
-What I want to know is ham-ness versus ham-ness. 
+. . .
 
-What I have is an email with the word "cialis".
+- What I want to know is spam-ness (versus ham-ness). 
+- What I have is an email with the word "cialis".
 
-$$ P(\text{spam} \mid \text{"cialis"}) = \frac{ P(\text{"cialis"} \mid \text{spam}) \, P(\text{spam})}{P(\text{"cialis"})} $$
+. . .
+
+$$ P(\text{spam} \mid \text{"cialis"}) = \frac{ P(\text{"cialis"} \mid \text{spam}) * P(\text{spam})}{P(\text{"cialis"})} $$
 
 
 ## Email example
 
-The two unconditional probabilities are base rates that need to be accounted for.
+The two unconditional probabilities are base rates that need to be accounted
+for.
 
-The prior is the frequency of spam in general. The average likelihood is the frequency of the word "cialis" in emails.
+. . .
 
-$$ P(\text{spam} \mid \text{"cialis"}) = \frac{\text{"cialis"\ freq.\ in\ spam} \, * \text{spam\ rate}}{\text{"cialis"\ freq.}} $$
+The prior is the frequency of spam in general. The average likelihood is the
+frequency of the word "cialis" in emails.
+
+$$ P(\text{spam} \mid \text{"cialis"}) = \frac{\text{"cialis"\ freq.\ in\ spam} * \text{spam\ rate}}{\text{"cialis"\ freq.}} $$
 
 
-----
+## "Bayesianism" 
 
 Some people would argue that using Bayes theorem is not "Bayesian". After
 all, in this example, we're just counting the frequency of events. 
 
-It's kind of weird. But here's the difference.
+It's kind of weird, but it is also true. 
+
+Simple event-counting is not what people usually mean by the word "Bayesian". 
 
 --------
 
@@ -299,12 +342,186 @@ $$ \text{updated information} = \frac{\text{likelihood of data} * \text{prior in
 
 Bayes' theorem provides a systematic way to update our knowledge as we encounter new data.
 
+. . .
+
 $$ \text{updated beliefs} \propto \text{likelihood of data} * \text{prior beliefs} $$
 
 - Update your beliefs in proportion to how well the data fits those beliefs.
 - Your beliefs have probabilities. You can quantify your uncertainty about what you know.
 
 
+# Making Bayes theorem work with regression
+
+
+## ok 
+
+You probably write regression models as a one-liner like:
+
+
+$$ \underbrace{y_i}_{observation} = 
+   \underbrace{\alpha + \beta _{1} x_{1i}}_{\text{predicted mean given \it{x}}} + 
+   \underbrace{\epsilon _i}_{\text{random error}} $$ 
+
+. . . 
+
+Data generating model: Observation $y_i$ is a draw from a normal distribution
+centered around a mean.
+
+We estimate the mean with a constant "intercept" term $\alpha$ plus a linear
+combination of predictor variables (just $x_1$ for now).
+
+----
+
+Let's re-write the model to make the normal-distribution part clear. No more 
+one-liner. (The $\sim$ means "sampled from".)
+
+\begin{align*}
+   y_i &\sim \mathrm{Normal}(\mathrm{mean} = \mu_i, \mathrm{SD} = \sigma)
+   \\
+  \mu_i &= \alpha + \beta_1*x_{1i}
+\end{align*}
+
+. . . 
+
+Observation $y_i$ is a draw from a normal distribution
+centered around a mean $\mu_i$ with a standard deviation of $\sigma$.
+
+The mean is a constant term $\alpha$ plus a linear combination of predictor
+variables (just $x_1$ for now).
+
+----
+
+(These equations describe the same models. It's just a different kind of
+notation.)
+
+----
+
+
+```{r staggered-bell-curves, echo = FALSE, fig.cap = "Scatter plot with bell curves overlaid to how the shape of the density remains the same. It's just the center that moves with x. ", message = FALSE, warning = FALSE}
+# options(hrbrthemes.loadfonts = TRUE)
+
+# Some toy data
+davis <- car::Davis %>%
+  filter(100 < height)
+
+# Fit a model and estimate mean at five points
+m <- lm(weight ~ height, davis)
+newdata <- data_frame(height = c(15:19 * 10))
+newdata$fit <- predict(m, newdata)
+
+# get density of random normal values
+get_density_df <- function(mean, sd, steps) {
+  ends <- qnorm(c(.001, .999), mean, sd)
+  steps <- seq(ends[1], ends[2], length.out = steps)
+
+  df <- data_frame(
+    value = steps,
+    density = dnorm(steps, mean, sd))
+  df
+}
+
+# Get a distribution at each mean
+simulated <- newdata %>%
+  group_by(height) %>%
+  do(get_density_df(.$fit, sigma(m), 10000)) %>%
+  ungroup
+
+
+ggplot(simulated) +
+  # Plot at each mean, adding some scaled value of density to the mean.
+  aes(x = height - (100 * density), y = value, group = height) +
+  geom_polygon(fill = "grey50") +
+  # raw data
+  geom_point(aes(height, weight), data = davis) +
+  labs(x = "height (cm)", y = "weight (kg)") + 
+  my_theme
+```
+
+
+# What is likelihood?
+
+
+----
+
+_Sidenote: This is nifty. A lot of my stats training made more sense
+once I had a broader understanding of likelihood._
+
+----
+
+## I have a model
+
+What is a statistical model?
+
+. . .
+
+It's a description of how the data could have been generated.
+
+
+
+
+## Likelihood measures fit
+
+How likely are the data in a given model? 
+
+. . . 
+
+I never see it explained this way, but I think of likelihood as "fit".
+
+How the well data fits in a given model.
+
+
+
+
+
+## {.fragile}
+
+We found some IQ scores in an old, questionable dataset.
+
+```{r some-code, echo = TRUE}
+library(dplyr)
+iqs <- car::Burt$IQbio
+iqs
+```
+
+IQs are designed to have a normal distribution with a population mean of 100
+and an SD of 15.
+
+How well do these data *fit* in that kind of bell curve?
+
+----
+
+## Density as height on a bell curve
+
+```{r, echo = FALSE}
+iq_df <- function(mean, sd = 15, xs = iqs) {
+  data_frame(
+    iq = seq(min(xs), max(xs), length.out = 100),
+    density = dnorm(iq, mean, 15),
+    mean = mean,
+    sd = sd)
+}
+```
+
+```{r iq-density-bell-curve, echo = FALSE, fig.cap = "A hypothetical bell curve with a mean of 100 and SD of 15."}
+p <- ggplot(iq_df(100, 15)) +
+  aes(iq, density) +
+  geom_line(size = 1)
+p
+```
+
+## Density as height on a bell curve
+
+```{r iq-density-bell-curve-2, echo = FALSE, fig.cap = "Likelihood of an IQ of 90"}
+one_iq <- data_frame(iq = 90, density = dnorm(90, 100, 15), yend = 0, xend = 90)
+
+p + 
+  geom_segment(aes(xend = xend, yend = yend), data = one_iq, size = 1) +
+  geom_point(data = one_iq, size = 3)
+```
+
+
+
+---
 
 
 
@@ -312,19 +529,39 @@ $$ \text{updated beliefs} \propto \text{likelihood of data} * \text{prior belief
 
 
 
+* Height of each point on curve is density around that point.
+* Higher density regions are more likely.
+* Data farther from peak density is less likely.
+
+----
 
 
 
+```{r iq-density-bell-curve-3, echo = FALSE, fig.cap = "Density of IQ scores drawn a bell curve with mean 100."}
+p <- ggplot(iq_df(100, 15)) +
+  aes(iq, density) +
+  geom_line(size = 1) +
+  geom_point(aes(x = iqs, y = dnorm(iqs, 100, 15)), data = data_frame(iqs), size = 3) +
+  geom_segment(aes(x = iqs, xend = iqs, y = 0, yend = dnorm(iqs, 100, 15)),
+               data = data_frame(iqs), size = 1) 
+p
+```
 
 
 
+----
 
+```{r iq-density-bell-curve-4, echo = FALSE, fig.cap = "Density of IQ scores drawn a bell curve with mean 130. The fit is terrible."}
+bad_mean <- 130
 
-
-
-
-
-
+p <- ggplot(iq_df(bad_mean, 15)) +
+  aes(iq, density) +
+  geom_line(size = 1) +
+  geom_point(aes(x = iqs, y = dnorm(iqs, bad_mean, 15)), data = data_frame(iqs), size = 3) +
+  geom_segment(aes(x = iqs, xend = iqs, y = 0, yend = dnorm(iqs, bad_mean, 15)),
+               data = data_frame(iqs), size = 1) 
+p
+```
 
 
 
