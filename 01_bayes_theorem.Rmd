@@ -1,18 +1,18 @@
 ---
-title: "Bayesian regression"
+title: "An introduction to Bayesian regression"
 author: "Tristan Mahr"
 date: "April 13, 2017"
 output:
-  github_document: default
   beamer_presentation:
     includes:
       in_header: header.txt
     latex_engine: pdflatex
     theme: Metropolis
     toc: no
+    slide_level: 2
+  github_document: default
   ioslides_presentation: default
   slidy_presentation: default
-subtitle: subtitle
 ---
 
 ```{r setup, include = FALSE}
@@ -36,20 +36,24 @@ my_theme <- theme_ipsum(base_size = 24, axis_title_size = 20)
 theme_set(my_theme)
 ```
 
+
 ## Overview
 
 * A little about me and how I got into Bayes
+* Big takeaway ideas
 * Mathematical intuition building
 * Bayesian updating
 * Fitting a model with RStanARM
 
+
 # Background
+
 
 ## About me 
 
 * I am dissertator in Communication Sciences and Disorders
 * I study word recognition in preschoolers
-* For statistics, I do multilevel logistic regression models
+* For statistics, I mostly do multilevel logistic regression models
 * R enthusiast
 
 ## I was once in your shoes
@@ -61,6 +65,8 @@ I _still_ refer to the slides from this course on contrast codes.
 But now I'm a "Bayesian".
 
 
+# A timeline
+
 ## August 2015: The "Crisis" in Psychology
 
 [Open Science Collaboration (2015)][osf2015] tries to replicate 100 studies
@@ -68,7 +74,7 @@ published in 3 psychology different journals in 2008.
 
 - Boil a study down to 1 test statistic and 1 effect size.
 - Replicate the study.
-- Compare replication's test statistical and effect size against original.
+- Compare replication's test statistic and effect size against original.
 
 ----
 
@@ -76,7 +82,7 @@ published in 3 psychology different journals in 2008.
 
 ----
 
-- Approximately 36% of the studies are replicated (same test statistic.
+- Approximately 36% of the studies are replicated (same test statistic).
 - On average, effect sizes in replications are half that of the original
   studies.
 
@@ -138,7 +144,9 @@ _p_-hacking
 Selective reporting
 ~ Reporting only the tests that yielded a significant result.
 
-----
+
+
+## My sense
 
 The usual way of doing things is _insecure_.
 
@@ -147,6 +155,7 @@ The usual way of doing things is _insecure_.
 > - Perfectly fine if you know what you're doing.
 > - Works great if you pre-register analyses. Provides error control.
 > - But vulnerable to exploitation.
+> - And many people don't know what they're doing.
 
 ----
 
@@ -158,6 +167,8 @@ I want to level up my stats and explore new techniques.
 
 - Maybe more robust estimation techniques?
 - Maybe machine learning techniques to complement conventional analyses?
+
+. . .
 
 I want something less finicky than statistical significance.
 
@@ -183,7 +194,7 @@ It emphasizes estimation, uncertainty and simulation.
 . . . 
 
 Midway through, the book pivots to Bayesian estimation. (Multilevel models are
-kind of Bayesian because they borrow information across different clusters.)
+kinda Bayesian because they borrow information across different clusters.)
 
 
 ## January 2016
@@ -216,11 +227,11 @@ resources made it really easy to get started with Bayesian stats.
 My goal with this approach has been to make better, more honest scientific
 summaries of observed data.
 
-# Classical versus Bayesian in two plots
+# Classical regression versus Bayesian regression in a few plots
 
 ## The data
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, warning = FALSE}
 ## Some toy data
 davis <- car::Davis %>% filter(100 < height) %>% as_data_frame()
 davis
@@ -237,7 +248,7 @@ ggplot(davis) +
   labs(x = "height (cm)", y = "weight (kg)")
 ```
 
-## Classical model shows line of best fit
+## Classical model provides the line of best fit
 
 ```{r hws-lm}
 ggplot(davis) + 
@@ -249,15 +260,17 @@ ggplot(davis) +
 
 ## Bayesian model's median line of fit
 
-
-```{r hws-stan}
+```{r, include=FALSE}
 n_draws <- 100
 alpha_level <- .15
 col_draw <- "grey60"
 col_median <-  "#3366FF"
 
 m <- rstanarm::stan_glm(weight ~ scale(height), davis, family = gaussian())
+```
 
+
+```{r hws-stan, message = FALSE}
 davis2 <- davis %>% mutate(Observation = seq_along(height))
 
 draws100 <- rstanarm::posterior_linpred(m) %>% 
@@ -321,9 +334,15 @@ ggplot(davis) +
 ```
 
 
-----
+## Summary
 
-# Bayesian sale pitch
+- Classical: There is a single "true" line of best fit, and I'll give my best 
+estimate of it.
+- Bayesian: There is a distribution of lines of fit, some more plausible than 
+others, and I'll give you samples from that distribution.
+
+
+# My experience with this framework
 
 ## Benefits
 
@@ -694,7 +713,7 @@ p
 Density function `dnorm(xs, mean = 100, sd = 15)` tells us the height of each
 value in `xs` when drawn on a normal bell curve.
 
-```{r}
+```{r, echo = TRUE}
 # likelihood (density) of each point
 dnorm(iqs, 100, 15) %>% round(3)
 ```
@@ -704,7 +723,7 @@ dnorm(iqs, 100, 15) %>% round(3)
 Likelihood of all points is the product. These quantities get vanishingly small
 [so we sum their logs instead][math-ex-ll]. (Hence, **log-likelihoods**.)
 
-```{r}
+```{r, echo = TRUE}
 # vanishingly small!
 prod(dnorm(iqs, 100, 15))
 
@@ -724,13 +743,19 @@ average IQ (115)? (Higher is better.)
 
 . . . 
 
-```{r}
+```{r, echo = TRUE}
 sum(dnorm(iqs, 85, 15, log = TRUE))
 sum(dnorm(iqs, 100, 15, log = TRUE))
 sum(dnorm(iqs, 115, 15, log = TRUE))
 ```
 
-. . .
+----
+
+```{r, echo = TRUE}
+sum(dnorm(iqs, 85, 15, log = TRUE))
+sum(dnorm(iqs, 100, 15, log = TRUE))
+sum(dnorm(iqs, 115, 15, log = TRUE))
+```
 
 Of these three, the data fit best with the "population average" mean (100).
 
@@ -778,13 +803,13 @@ the IQs. This is a flat or uniform prior.
 
 Here's our model.
 
-$$
+
 \begin{align*}
    \mathrm{IQ}_i &\sim \text{Normal}(\mu, \sigma = 15) &\text{[likelihood]}
    \\
   \mu &\sim \{\text{integers from 70 to 130}\} &\text{[prior for }\mu]
 \end{align*}
-$$
+
 
 ----
 
@@ -846,9 +871,6 @@ df_iq_model$prob  <- df_iq_model$prob / sum(df_iq_model$prob)
 sum(df_iq_model$prob)
 ```
 
-
-
-
 ----
 
 ```{r iq-01-data, echo = FALSE, fig.cap = NULL}
@@ -863,8 +885,6 @@ ggplot(df_iq_model) +
   ylab("probability") +
   ggtitle("Data observed: 1")
 ```
-
-
 
 
 ----
@@ -949,7 +969,7 @@ https://github.com/tjmahr/MadR_RStanARM/blob/master/assets/simple-updating.gif
 
 ## Linear models
 
-I learned stats in this course, so you probably write regression models as a
+I learned stats in this course, so I bet you probably write regression models as a
 one-liner like:
 
 
@@ -967,16 +987,16 @@ combination of predictor variables (just $x_1$ for now).
 
 ----
 
-Let's re-write the model to make the normal-distribution part clear. No more 
+Let's re-write the model to make the normal-distribution part clearer. No more 
 one-liner. (The $\sim$ means "sampled from".)
 
-$$
+
 \begin{align*}
    y_i &\sim \text{Normal}(\text{mean} = \mu_i, \text{SD} = \sigma) &\text{[likelihood]}
    \\
   \mu_i &= \alpha + \beta_1*x_{1i} &\text{[linear model]}
 \end{align*}
-$$
+
 
 . . . 
 
@@ -1048,7 +1068,7 @@ The parameters we need to estimate for regression: $\alpha, \beta_1, \sigma$.
 
 . . .
 
-$$
+
 \begin{align*}
    y_i &\sim \text{Normal}(\mu_i, \sigma) &\text{[likelihood]}
    \\
@@ -1057,7 +1077,7 @@ $$
   \beta_1 &\sim \text{Normal}(0, 5) &\text{[prior for }\beta_1] \\ 
   \sigma &\sim \text{HalfCauchy}(0, 5) &\text{[prior for }\sigma] \\ 
 \end{align*}
-$$
+
 
 ## What's the point?
 
@@ -1076,6 +1096,7 @@ Parameters we need to estimate: $\alpha, \beta_1, \sigma$
 
 
 $$ \mathrm{posterior} = \frac{ \mathrm{likelihood} * \mathrm{prior}}{\mathrm{average\ likelihood}} $$
+
 . . . 
 
 $$ P(\alpha, \beta, \sigma \mid x) = \frac{ P(x \mid \alpha, \beta, \sigma) \, P(\alpha, \beta, \sigma)}{\iiint \, P(x \mid \alpha, \beta, \sigma) \, P(\alpha, \beta, \sigma) \,d\alpha \,d\beta \,d\sigma} $$
@@ -1098,7 +1119,7 @@ Those samples will provide a detailed picture of the posterior.
 
 ## An example: Height and Weight by Sex
 
-```{r}
+```{r, echo = TRUE}
 # Some toy data
 davis <- car::Davis %>% filter(100 < height) %>% as_data_frame()
 davis
@@ -1108,7 +1129,7 @@ davis
 
 ## Classical linear model
 
-```{r}
+```{r, echo = TRUE}
 mean(davis$height)
 davis$heightC <- davis$height - mean(davis$height)
 
@@ -1125,8 +1146,8 @@ RStanARM: RStan Applied Regression Modeling
 
 - Batteries-included versions of common regression models.
 - `glm` -> `stan_glm`, `glmer` -> `stan_glmer`.
-- [CRAN page](https://cran.r-project.org/web/packages/rstanarm/)
-  - Very good! They have lots of detailed vignettes!
+- [CRAN page](https://cran.r-project.org/web/packages/rstanarm/) is very good! 
+  They have lots of detailed vignettes!
 - Proper successor to the `arm` package.
 
 
@@ -1137,8 +1158,7 @@ library(rstanarm)
 ```
 
 * So... hard-code the priors.
-* I only set the `mc.cores` option when I have a big model that going to take
-  more than a minute to fit.
+
 
 
 
@@ -1214,7 +1234,6 @@ ggplot(davis) +
 
 
 ```{r}
-
 part1 <- davis %>% 
   filter(sex == "M") %>% 
   modelr::data_grid(heightC) %>% 
@@ -1259,16 +1278,6 @@ p2
   
 
 
-geom_abline(aes(color = "F", intercept = F_Intercept,
-                  slope = F_Slope), data = fits, alpha = .075) +
-  geom_abline(aes(color = "M", intercept = M_Intercept,
-                  slope = M_Slope), data = fits, alpha = .075) +
-  geom_abline(aes(color = "F", intercept = F_Intercept,
-                  slope = F_Slope), data = medians, size = 1.25) +
-  geom_abline(aes(color = "M", intercept = M_Intercept,
-                  slope = M_Slope), data = medians, size = 1.25) +
-  geom_point() +
-  theme(legend.position = c(0, 1), legend.justification = c(0, 1))
 ```
 
 ```
@@ -1293,7 +1302,7 @@ samples
 
 ## Looking at the posterior parameter samples
 
-```{r histogram-of-height-effect, fig.cap = "Histogram of height effect."}
+```{r histogram-of-height-effect, fig.cap = "Histogram of height effect.", message = FALSE}
 ggplot(samples) + 
   aes(x = heightC) + 
   geom_histogram() + 
@@ -1315,22 +1324,22 @@ The 90% interval contains the middle 90% of the parameter values.
 There is a 5% chance, says the model, the height parameter is below the 5% 
 quantile.
 
-```{r}
+```{r, echo = TRUE}
 posterior_interval(stan_model)
 ```
 
 
-## ROPE
+<!-- ## ROPE -->
 
-ROPE: Region of practical equivalence.
+<!-- ROPE: Region of practical equivalence. -->
 
-Let's say that the height effect is practically equivalent to 0 when it fall
-between -0.1 and 0.1. How many values are in this ROPE?
+<!-- Let's say that the height effect is practically equivalent to 0 when it fall -->
+<!-- between -0.1 and 0.1. How many values are in this ROPE? -->
 
-```{r}
-height_effects <- as.data.frame(stan_model)[["heightC"]]
-mean(-.1 <= height_effects & height_effects <= .1)
-```
+<!-- ```{r} -->
+<!-- height_effects <- as.data.frame(stan_model)[["heightC"]] -->
+<!-- mean(-.1 <= height_effects & height_effects <= .1) -->
+<!-- ``` -->
 
 
 
@@ -1343,21 +1352,29 @@ plot(stan_model)
 ```
 
 
+## Live demo
 
+```{r}
 
-## Plotting some of the parameters
-
-```{r subset-of-parameters, fig.cap = "Basic plot() called on model. Shows 80%, 95% intervals. Limited to just parameters matching 'height'."}
-# Match a subset of the parameters
-plot(stan_model, regex_pars = "height") 
 ```
 
-<!-- ## What is the predicted value for each sex? -->
+
+<!-- * * *  -->
 
 
-<!-- ```{r} -->
-<!-- new_data <- davis -->
+<!-- ## Plotting some of the parameters -->
+
+<!-- ```{r subset-of-parameters, fig.cap = "Basic plot() called on model. Shows 80%, 95% intervals. Limited to just parameters matching 'height'."} -->
+<!-- # Match a subset of the parameters -->
+<!-- plot(stan_model, regex_pars = "height")  -->
 <!-- ``` -->
+
+<!-- <!-- ## What is the predicted value for each sex? --> -->
+
+
+<!-- <!-- ```{r} --> -->
+<!-- <!-- new_data <- davis --> -->
+<!-- <!-- ``` --> -->
 
 
 
