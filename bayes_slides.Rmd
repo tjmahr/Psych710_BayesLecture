@@ -3,22 +3,25 @@ title: "An introduction to Bayesian regression"
 author: "Tristan Mahr"
 date: "April 13, 2017"
 output:
+  html_document:
+    css: assets/github.css
+    mathjax: https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML
   beamer_presentation:
     includes:
-      in_header: header.txt
+      in_header: assets/header.txt
     latex_engine: pdflatex
+    slide_level: 2
     theme: Metropolis
     toc: no
-    slide_level: 2
-  github_document: default
-  ioslides_presentation: default
-  slidy_presentation: default
+subtitle: Guest lecture for Psych 610/710 at UW--Madison
 ---
 
 ```{r setup, include = FALSE}
+# Limit code output to 60 characters
 options(width = 60)
 knitr::opts_knit$set(width = 60)
 
+# Don't show code by default. Print the output as "#>" comments
 knitr::opts_chunk$set(
   echo = FALSE,
   comment = "#>",
@@ -26,28 +29,49 @@ knitr::opts_chunk$set(
 
 library(dplyr)
 library(ggplot2)
+
+# Use a custom theme for plots. Do some font stuff to make sure pdfs work
 library(extrafont)
 library(hrbrthemes)
 
 extrafont::loadfonts()
 
+# Set default theme for plots
 my_theme <- theme_ipsum(base_size = 24, axis_title_size = 20)
-
 theme_set(my_theme)
+
+
+# Make a function that prints a string of characters if the output is pdf
+make_latex_decorator <- function(output, otherwise) {
+  function() {
+      if (knitr:::is_latex_output()) output else otherwise
+  }
+}
+
+insert_pause <- make_latex_decorator(". . .", "\n")
+insert_slide_break <- make_latex_decorator("----", "\n")
+insert_inc_bullet <- make_latex_decorator("> *", "*")
+insert_html_math <- make_latex_decorator("", "$$")
+
+
 ```
 
+## Online resources
+
+Slides and R code that produced them are online: https://github.com/tjmahr/Psych710_BayesLecture
+
+I gave a similar, more code-heavy version of this talk to the R Users Group: https://github.com/tjmahr/MadR_RStanARM
 
 ## Overview
 
 * A little about me and how I got into Bayes
-* Big takeaway ideas
 * Mathematical intuition building
 * Bayesian updating
 * Fitting a model with RStanARM
+* Big takeaway ideas
 
 
 # Background
-
 
 ## About me 
 
@@ -76,11 +100,11 @@ published in 3 psychology different journals in 2008.
 - Replicate the study.
 - Compare replication's test statistic and effect size against original.
 
-----
+`r insert_slide_break()`
 
 ![Scatter plot of original vs replicated effect sizes](./assets/reproducibility.PNG)
 
-----
+`r insert_slide_break()`
 
 - Approximately 36% of the studies are replicated (same test statistic).
 - On average, effect sizes in replications are half that of the original
@@ -95,10 +119,10 @@ published in 3 psychology different journals in 2008.
 
 ## Reactions
 
-> * We're doomed.
-> * Most findings are probably false, and we knew that already.
-> * No, this is business as usual.
-> * Any credible discipline has to do this kind of house-cleaning from time to time.
+`r insert_inc_bullet()` We're doomed.
+`r insert_inc_bullet()` Most findings are probably false, and we knew that already.
+`r insert_inc_bullet()` No, this is business as usual.
+`r insert_inc_bullet()` Any credible discipline has to do this kind of house-cleaning from time to time.
 
 ## Lots of hand wringing and soul searching
 
@@ -112,52 +136,46 @@ Some constructive:
 - [Everything is f'ed][everything-fucked] -- so what else is new?
 - Increased rigor and openness are [a good thing][repeat-after-me].
 
-[replication-hacks]: http://www.sciencedirect.com/science/article/pii/S002210311600007X
-[method-terrorists]: http://andrewgelman.com/2016/09/21/what-has-happened-down-here-is-the-winds-have-changed/
-[everything-fucked]: https://hardsci.wordpress.com/2016/08/11/everything-is-fucked-the-syllabus/
-[repeat-after-me]: https://thenib.com/repeat-after-me
-
-
 ## Crisis made me think more about questionable practices
 
 All those unintentional acts and rituals to appease the Statistical Significance
 gods.
 
-. . . 
+`r insert_pause()`
 
 HARKing 
 ~ Hypothesizing after results are known.
 ~ Telling a story to fit the data.
 
-. . . 
+`r insert_pause()` 
 
 Garden of forking data
 ~ Conducting countless sub-tests and sub-analyses on the data.
 
-. . . 
+`r insert_pause()`
 
 _p_-hacking
 ~ Doing these tests in order to find a significant effect.
 
-. . . 
+`r insert_pause()`
 
 Selective reporting
 ~ Reporting only the tests that yielded a significant result.
-
 
 
 ## My sense
 
 The usual way of doing things is _insecure_.
 
-. . . 
+`r insert_pause()`
 
-> - Perfectly fine if you know what you're doing.
-> - Works great if you pre-register analyses. Provides error control.
-> - But vulnerable to exploitation.
-> - And many people don't know what they're doing.
+`r insert_inc_bullet()` Perfectly fine if you know what you're doing.
+`r insert_inc_bullet()` Works great if you pre-register analyses. Provides error control.
+`r insert_inc_bullet()` But vulnerable to exploitation.
+`r insert_inc_bullet()` And many people don't know what they're doing.
 
-----
+`r insert_slide_break()`
+
 
 ## My response to the crisis
 
@@ -168,7 +186,7 @@ I want to level up my stats and explore new techniques.
 - Maybe more robust estimation techniques?
 - Maybe machine learning techniques to complement conventional analyses?
 
-. . .
+`r insert_pause()`
 
 I want something less finicky than statistical significance.
 
@@ -177,12 +195,11 @@ I want something less finicky than statistical significance.
 - Statistical significance is not related to practical significance.
 
 
-
 ## December 2015
 
 ![Cover of Data Analysis USing Regression and Multilevel/Hierarchical Models](./assets/arm.jpeg)
 
----
+`r insert_slide_break()`
 
 I started reading the Gelman and Hill book.
 
@@ -191,7 +208,7 @@ I started reading the Gelman and Hill book.
 
 It emphasizes estimation, uncertainty and simulation.
 
-. . . 
+`r insert_pause()`
 
 Midway through, the book pivots to Bayesian estimation. (Multilevel models are
 kinda Bayesian because they borrow information across different clusters.)
@@ -199,8 +216,8 @@ kinda Bayesian because they borrow information across different clusters.)
 
 ## January 2016
 
-I'm down a rabbit hole, writing Stan (Bayesian) models to fit the models from the ARM
-book, and there is an influx of Bayesian tools for R.
+I'm down a rabbit hole, writing Stan (Bayesian) models to fit the models from
+the ARM book, and there is an influx of Bayesian tools for R.
 
 - [Statistical Rethinking][rethinking], a book that reteaches regression from a
   Bayesian perspective with R and Stan, is released.
@@ -212,12 +229,6 @@ book, and there is an influx of Bayesian tools for R.
 
 I eat all this up. I become a convert.
 
-[rethinking]: http://xcelab.net/rm/statistical-rethinking/
-[brms]: https://cran.r-project.org/web/packages/brms/index.html
-[rstanarm]: https://cran.r-project.org/web/packages/rstanarm/index.html
-[we-r-bayesians]: https://thinkinator.com/2016/01/12/r-users-will-now-inevitably-become-bayesians/
-
-
 
 ## Long story short
 
@@ -227,17 +238,21 @@ resources made it really easy to get started with Bayesian stats.
 My goal with this approach has been to make better, more honest scientific
 summaries of observed data.
 
+
+
+
+
 # Classical regression versus Bayesian regression in a few plots
 
 ## The data
 
-```{r, echo=TRUE, warning = FALSE}
-## Some toy data
+```{r, echo = TRUE, warning = FALSE}
+# Some toy data
 davis <- car::Davis %>% filter(100 < height) %>% as_data_frame()
 davis
 ```
 
-----
+`r insert_slide_break()`
 
 ## The data
 
@@ -260,48 +275,47 @@ ggplot(davis) +
 
 ## Bayesian model's median line of fit
 
-```{r, include=FALSE}
-n_draws <- 100
-alpha_level <- .15
-col_draw <- "grey60"
-col_median <-  "#3366FF"
-
+```{r, include = FALSE}
 m <- rstanarm::stan_glm(weight ~ scale(height), davis, family = gaussian())
 ```
 
 
 ```{r hws-stan, message = FALSE}
-davis2 <- davis %>% mutate(Observation = seq_along(height))
+alpha_level <- .15
+col_draw <- "grey60"
+col_median <-  "#3366FF"
 
+# Number the observations
+davis2 <- davis %>% 
+  mutate(Observation = seq_along(height))
+
+# Get the linear prediction (the mean of y at x) for 100 posterior samples
 draws100 <- rstanarm::posterior_linpred(m) %>% 
+  # Convert to dataframe and extract 100 random rows
   as_data_frame() %>% 
   sample_n(100) %>% 
+  # Convert to matrix and melt into long form data-frame.
   as.matrix() %>% 
+  # Attach x values for each predict using the Observation number
   reshape2::melt(c("Draw", "Observation")) %>% 
-  left_join(davis2)
+  left_join(davis2, by = "Observation")
 
+# Get 20 samples
 draws20 <- rstanarm::posterior_linpred(m) %>% 
   as_data_frame() %>% 
   sample_n(20) %>% 
   as.matrix() %>% 
   reshape2::melt(c("Draw", "Observation")) %>% 
-  left_join(davis2)
+  left_join(davis2, by = "Observation")
 
-
-draws100 <- rstanarm::posterior_linpred(m) %>% 
-  as_data_frame() %>% 
-  sample_n(n_draws) %>% 
-  as.matrix() %>% 
-  reshape2::melt(c("Draw", "Observation")) %>% 
-  left_join(davis2)
-
+# Get all the predictions (4000 of them) but take the median prdiction
 drawsmedian <- rstanarm::posterior_linpred(m) %>% 
   as.matrix() %>% 
   reshape2::melt(c("Draw", "Observation")) %>% 
+  # Get median linear prediction of each observation
   group_by(Observation) %>% 
   summarise(Estimate = median(value)) %>% 
-  left_join(davis2)
-
+  left_join(davis2, by = "Observation")
 
 ggplot(davis) + 
   aes(x = height, y = weight) + 
@@ -313,22 +327,24 @@ ggplot(davis) +
 
 ## Median line and 20 other lines from posterior
 
-```{r}
+```{r hws-20}
 ggplot(davis) + 
   aes(x = height, y = weight) + 
   geom_point() + 
-  geom_line(aes(y = value, group = Draw), data = draws20, color = col_draw, alpha = .8) +
+  geom_line(aes(y = value, group = Draw), data = draws20, 
+            color = col_draw, alpha = .8) +
   geom_line(aes(y = Estimate), data = drawsmedian,size = 1, color = col_median) +
   labs(x = "height (cm)", y = "weight (kg)")
 ```
 
 ## Median line and 100 other lines from posterior
 
-```{r}
+```{r hws-100}
 ggplot(davis) + 
   aes(x = height, y = weight) + 
   geom_point() + 
-  geom_line(aes(y = value, group = Draw), data = draws100, color = col_draw, alpha = .3) +
+  geom_line(aes(y = value, group = Draw), data = draws100, 
+            color = col_draw, alpha = .3) +
   geom_line(aes(y = Estimate), data = drawsmedian,size = 1, color = col_median) +
   labs(x = "height (cm)", y = "weight (kg)")
 ```
@@ -337,100 +353,16 @@ ggplot(davis) +
 ## Summary
 
 - Classical: There is a single "true" line of best fit, and I'll give my best 
-estimate of it.
-- Bayesian: There is a distribution of lines of fit, some more plausible than 
-others, and I'll give you samples from that distribution.
+  estimate of it.
+- Bayesian: There is a distribution of lines of fit---some more plausible than 
+  others---and I'll give you samples from that distribution.
 
-
-# My experience with this framework
-
-## Benefits
-
-The models provide intuitive results.
-
-- When we misinterpret _p_-values or confidence intervals, we usually are
-  interpreting them in a Bayesian way.
-- Bayesian uncertainty intervals are what we want from confidence intervals.
-
-----
-
-Bayesian models quantify uncertainty.
-
-- Basically, if a classical model can estimate or predict something about the 
-  data, the Bayesian model can estimate a distribution for that thing too.
-- Bayesian models are generative, and the posterior predictive distribution 
-  (which simulates fake data using the model) is a useful tool.
-
-
-----
-
-Bayesian models incorporate prior information.
-
-- That information can be weak, moderate or strong.
-- I don't say "prior beliefs" because that sounds too subjective.
-- All models make assumptions and prior information, and priors make that 
-  information explicit.
- 
-----
-
-Bayesian models are flexible.
-
-- This course captures a bag of tricks (_t_-tests, ANOVA, ANCOVA, mixed 
-  effects) under a general framework (it's all regression).
-- Bayesian regression incorporates even more tricks (missing data imputation, 
-  measurement error models, robust error models) into the framework.
-
-----
-
-Bayesian models have computational benefits.
-
-- Multilevel models with lots of random effects probably won't converge.
-- But some weak prior information will nudge the models in the right direction 
-  and make the models work.
-
-## Downsides
-
-It's different.
-
-- People are really used to signficance testing and _p_-values, so you have to 
-  do more hand-holding when explaining results.
-- You don't get to say _significant_ anymore. (I use _plausible_ and 
-  _credible_.)
-- People have misconceptions about subjectivism and bias.
-
-
-----
-
-More work before and after modeling.
-
-- You need to specify priors for your parameters. 
-- Your model is a distribution, so you have to do a bit more work wrangling 
-  the data.
-
-----
-
-It takes longer.
-
-- Classical models solve an optimization problem and provide a single set of 
-  parameter estimates. 
-- MCMC sampling explores the space of parameter values and provides thousands of 
-  parameter estimates.
-- It can take a few hours to fit a complicated multilevel model.
-
----- 
-
-It's not a cure-all. There are still insecurities.
-
-- It's statistics and people can still misunderstand the methods and models. 
-- A motivated _p_-hacker can still exploit Bayes factors, which is why I won't
-  discuss them.
 
 
 
 
 
 # Building mathematical intuitions
-
 
 ## Caveat
 
@@ -444,11 +376,11 @@ It's not a cure-all. There are still insecurities.
 
 $$ p(A \mid B) : \text{probability of A given B}$$
 
-. . .
+`r insert_pause()`
 
 Suppose that 95% of emails with the phrase "investment opportunity" are spam.
 
-. . .
+`r insert_pause()`
 
 $$ p(\text{spam email} \mid \text{"investment opportunity"})  = .95 $$
 
@@ -459,33 +391,31 @@ What would this probability express?
 
 $$ p(\text{"investment opportunity"} \mid \text{spam email})$$
 
-. . .
+`r insert_pause()`
 
 That ordering matters. $p(A \mid B)$ is not the same as $p(B \mid A)$.
 
 
-
-
-## Bayes theorem
+## Bayes' theorem
 
 A theorem about conditional probability.
 
 $$ p(B \mid A) = \frac{ p(A \mid B) * p(B)}{p(A)} $$
 
-----
+`r insert_slide_break()`
 
 I can never remember this equation with letters. Here's how I prefer to write it.
 
 $$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
 
----
+`r insert_slide_break()`
 
 $$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
 
 The "hypothesis" is typically something unobserved or unknown. It's what you 
 want to learn about using the data. 
 
-. . . 
+`r insert_pause()` 
 
 For regression models, the "hypothesis" is a parameter (intercept, slopes or 
 error terms).
@@ -500,7 +430,7 @@ How plausible is some hypothesis given the data?
 
 $$ p(\text{hypothesis} \mid \text{data}) = \frac{ p(\text{data} \mid \text{hypothesis}) * p(\text{hypothesis})}{p(\text{data})} $$
 
-. . .
+`r insert_pause()`
 
 Pieces of the equation:
 
@@ -511,12 +441,12 @@ $$ \text{posterior} = \frac{ \text{likelihood} * \text{prior}}{\text{average lik
 
 I got an email with the word "cialis" in it. Is it spam?
 
-. . .
+`r insert_pause()`
 
 - What I want to know is spam-ness (versus ham-ness). 
 - What I have is an email with the word "cialis".
 
-. . .
+`r insert_pause()`
 
 $$ 
 P(\text{spam} \mid \text{"cialis"}) = 
@@ -530,7 +460,7 @@ $$
 The two unconditional probabilities are base rates that need to be accounted
 for.
 
-. . .
+`r insert_pause()`
 
 The prior is the frequency of spam in general. The average likelihood is the
 frequency of the word "cialis" in emails.
@@ -551,9 +481,6 @@ It's kind of weird, but it is also true.
 
 Simple event-counting is not what people usually mean by the word "Bayesian". 
 
---------
-
-
 ## The "Bayesianism" form of Bayes' theorem
 
 $$ 
@@ -564,7 +491,7 @@ $$
 
 Bayes' theorem provides a systematic way to update our knowledge as we encounter new data.
 
-. . .
+`r insert_pause()`
 
 $$ 
 \text{updated beliefs} \propto 
@@ -579,18 +506,19 @@ $$
 # Okay, but what is likelihood?
 
 
-----
+`r insert_slide_break()`
 
 _Sidenote: This is nifty. A lot of my stats training made more sense
 once I had a broader understanding of likelihood._
 
-----
+`r insert_slide_break()`
+
 
 ## First, what are models?!
 
 What is a statistical model?
 
-. . .
+`r insert_pause()`
 
 It's a description of how the data could have been generated.
 
@@ -599,11 +527,13 @@ It's a description of how the data could have been generated.
 
 > IQ scores are normally distributed.
 
-. . .
+`r insert_pause()`
 
 $$
 \mathrm{IQ}_i \sim \mathrm{Normal}(\underbrace{\mu}_{\text{mean}}, \underbrace{\sigma}_{\text{SD}})
 $$
+
+(The $\sim$ means "sampled from" or "drawn from".)
 
 $\mu$ and $\sigma$ are parameters for this model that change the center and
 spread of the normal bell curve.
@@ -616,7 +546,7 @@ The normative IQ model has $\mu = 100$  and $\sigma = 15$.
 
 How likely are the data in a given model? 
 
-. . . 
+`r insert_pause()` 
 
 I never see it explained this way, but I think of likelihood as "fit".
 
@@ -633,7 +563,7 @@ iqs <- car::Burt$IQbio
 iqs
 ```
 
-. . . 
+`r insert_pause()` 
 
 IQs are designed to have a normal distribution with a population mean of 100
 and an SD of 15.
@@ -644,6 +574,8 @@ How well do these data *fit* in that kind of bell curve?
 ## Density as height on a bell curve
 
 ```{r, echo = FALSE}
+# Function to give a data-frame of density values for the IQ scores for a given
+# mean
 iq_df <- function(mean, sd = 15, xs = iqs) {
   data_frame(
     iq = seq(min(xs), max(xs), length.out = 100),
@@ -664,36 +596,38 @@ p
 ## Density measures likelihood
 
 ```{r iq-density-bell-curve-2, echo = FALSE, fig.cap = "Likelihood of an IQ of 90"}
-one_iq <- data_frame(iq = 90, density = dnorm(90, 100, 15), yend = 0, xend = 90)
+one_iq <- data_frame(
+  iq = 90, 
+  density = dnorm(90, 100, 15), 
+  yend = 0, 
+  xend = 90)
 
+# Draw a single point
 p + 
   geom_segment(aes(xend = xend, yend = yend), data = one_iq, size = 1) +
   geom_point(data = one_iq, size = 3)
 ```
 
-
-
----
+`r insert_slide_break()`
 
 * Height of each point on curve is density around that point.
 * Higher density regions are more likely.
 * Data farther from peak density is less likely.
 
-----
+`r insert_slide_break()`
 
 ```{r iq-density-bell-curve-3, echo = FALSE, fig.cap = "Density of IQ scores drawn a bell curve with mean 100."}
 p <- ggplot(iq_df(100, 15)) +
   aes(iq, density) +
   geom_line(size = 1) +
-  geom_point(aes(x = iqs, y = dnorm(iqs, 100, 15)), data = data_frame(iqs), size = 3) +
+  geom_point(aes(x = iqs, y = dnorm(iqs, 100, 15)), 
+             data = data_frame(iqs), size = 3) +
   geom_segment(aes(x = iqs, xend = iqs, y = 0, yend = dnorm(iqs, 100, 15)),
                data = data_frame(iqs), size = 1) 
 p
 ```
 
-
-
-----
+`r insert_slide_break()`
 
 ```{r iq-density-bell-curve-4, echo = FALSE, fig.cap = "Density of IQ scores drawn a bell curve with mean 130. The fit is terrible."}
 bad_mean <- 130
@@ -701,14 +635,14 @@ bad_mean <- 130
 p <- ggplot(iq_df(bad_mean, 15)) +
   aes(iq, density) +
   geom_line(size = 1) +
-  geom_point(aes(x = iqs, y = dnorm(iqs, bad_mean, 15)), data = data_frame(iqs), size = 3) +
+  geom_point(aes(x = iqs, y = dnorm(iqs, bad_mean, 15)), 
+             data = data_frame(iqs), size = 3) +
   geom_segment(aes(x = iqs, xend = iqs, y = 0, yend = dnorm(iqs, bad_mean, 15)),
                data = data_frame(iqs), size = 1) 
 p
 ```
 
-
-----
+`r insert_slide_break()`
 
 Density function `dnorm(xs, mean = 100, sd = 15)` tells us the height of each
 value in `xs` when drawn on a normal bell curve.
@@ -718,22 +652,21 @@ value in `xs` when drawn on a normal bell curve.
 dnorm(iqs, 100, 15) %>% round(3)
 ```
 
-. . . 
+`r insert_pause()` 
 
 Likelihood of all points is the product. These quantities get vanishingly small
 [so we sum their logs instead][math-ex-ll]. (Hence, **log-likelihoods**.)
 
 ```{r, echo = TRUE}
-# vanishingly small!
+# 2 * 10^-50 is vaaaaaaanishingly small! 
 prod(dnorm(iqs, 100, 15))
 
 # log scale
 sum(dnorm(iqs, 100, 15, log = TRUE))
 ```
 
-[math-ex-ll]: https://math.stackexchange.com/questions/892832/why-we-consider-log-likelihood-instead-of-likelihood-in-gaussian-distribution
 
-----
+`r insert_slide_break()`
 
 Log-likelihoods provide a measure of how well the data fit a given normal
 distribution.
@@ -741,7 +674,7 @@ distribution.
 Which mean best fits the data? Below average IQ (85), average IQ (100), or above
 average IQ (115)? (Higher is better.)
 
-. . . 
+`r insert_pause()` 
 
 ```{r, echo = TRUE}
 sum(dnorm(iqs, 85, 15, log = TRUE))
@@ -749,7 +682,7 @@ sum(dnorm(iqs, 100, 15, log = TRUE))
 sum(dnorm(iqs, 115, 15, log = TRUE))
 ```
 
-----
+`r insert_slide_break()`
 
 ```{r, echo = TRUE}
 sum(dnorm(iqs, 85, 15, log = TRUE))
@@ -761,8 +694,6 @@ Of these three, the data fit best with the "population average" mean (100).
 
 We just used a **maximum likelihood** criterion to choose among these
 alternatives!
-
-
 
 
 ## Likelihood summary
@@ -779,8 +710,6 @@ model.
 Classical regression's "line of best fit" finds model parameters that maximize 
 the likelihood of the data.
 
-
-
 # Bayesian models
 
 $$ \text{posterior} = \frac{ \text{likelihood} * \text{prior}}{\text{average likelihood}} $$
@@ -792,46 +721,47 @@ plausible ways the data could have been generated?
 - Update our prior information in proportion to how well the data fits with
   that information.
 
-
-
-
 ## Bayesian updating
-
 
 Let's consider all integer values from 70 to 130 as equally probable means for
 the IQs. This is a flat or uniform prior.
 
 Here's our model.
 
-
+`r insert_html_math()`
 \begin{align*}
    \mathrm{IQ}_i &\sim \text{Normal}(\mu, \sigma = 15) &\text{[likelihood]}
    \\
   \mu &\sim \{\text{integers from 70 to 130}\} &\text{[prior for }\mu]
 \end{align*}
+`r insert_html_math()`
 
 
-----
+`r insert_slide_break()`
 
 We are going to use **grid approximation** for this example. That means 
-systematically exploring about a bunch of parameter values.
+systematically exploring about a bunch of parameter values. (It's mostly useful 
+for illustrating how Bayes' theorem works.)
 
 ```{r, echo = TRUE}
-# Keep track of last probability value
 df_iq_model <- data_frame(
+  # Candidate mean value
   mean = 70:130,
+  # Probability of each candidate mean right now
   prob = 1 / length(mean),
+  # Probability of each candidate mean during the last update
   previous = NA_real_)
 ```
 
-----
+`r insert_slide_break()`
 
 ```{r, echo = TRUE}
+# Probabilities sum to 1
 sum(df_iq_model$prob)
 df_iq_model
 ```
 
-----
+`r insert_slide_break()`
 
 ```{r iq-00-data, echo = FALSE}
 ggplot(df_iq_model) +
@@ -843,10 +773,7 @@ ggplot(df_iq_model) +
   ggtitle("Data observed: 0")
 ```
 
-
-
-
-----
+`r insert_slide_break()`
 
 We observe one data-point, $y = `r iqs[1]`$, and update our prior information
 using the likelihood of the data at each possible mean.
@@ -859,7 +786,7 @@ df_iq_model$prob <- likelihoods * df_iq_model$prob
 sum(df_iq_model$prob)
 ```
 
-. . . 
+`r insert_pause()` 
 
 That's not right! We need the *average likelihood* to ensure that the
 probabilities add up to 1. This is why it's sometimes called a *normalizing
@@ -871,7 +798,7 @@ df_iq_model$prob  <- df_iq_model$prob / sum(df_iq_model$prob)
 sum(df_iq_model$prob)
 ```
 
-----
+`r insert_slide_break()`
 
 ```{r iq-01-data, echo = FALSE, fig.cap = NULL}
 ggplot(df_iq_model) +
@@ -887,7 +814,7 @@ ggplot(df_iq_model) +
 ```
 
 
-----
+`r insert_slide_break()`
 
 We observe another data-point and update the probability with the likelihood
 again.
@@ -904,7 +831,7 @@ df_iq_model
 
 
 
-----
+`r insert_slide_break()`
 
 ```{r iq-02-data, echo = FALSE, fig.cap = NULL}
 ggplot(df_iq_model) +
@@ -923,7 +850,7 @@ ggplot(df_iq_model) +
 
 
 
-----
+`r insert_slide_break()`
 
 And one more...
 
@@ -939,7 +866,7 @@ df_iq_model
 
 
 
-----
+`r insert_slide_break()`
 
 ```{r iq-03-data, echo = FALSE, fig.cap = NULL}
 ggplot(df_iq_model) +
@@ -955,13 +882,9 @@ ggplot(df_iq_model) +
   ggtitle("Data observed: 3")
 ```
 
-----
+## An animation of these steps
 
 https://github.com/tjmahr/MadR_RStanARM/blob/master/assets/simple-updating.gif
-
-----
-
-
 
 
 # Connecting Bayes' theorem to linear regression
@@ -972,12 +895,11 @@ https://github.com/tjmahr/MadR_RStanARM/blob/master/assets/simple-updating.gif
 I learned stats in this course, so I bet you probably write regression models as a
 one-liner like:
 
-
 $$ \underbrace{y_i}_{\text{observation}} = 
    \underbrace{\alpha + \beta _{1} x_{1i}}_{\text{predicted mean given }x} + 
    \underbrace{\epsilon _i}_{\text{random error}} $$ 
 
-. . . 
+`r insert_pause()` 
 
 Data generating model: Observation $y_i$ is a draw from a normal distribution
 centered around a mean.
@@ -985,20 +907,20 @@ centered around a mean.
 We estimate the mean with a constant "intercept" term $\alpha$ plus a linear
 combination of predictor variables (just $x_1$ for now).
 
-----
+`r insert_slide_break()`
 
 Let's re-write the model to make the normal-distribution part clearer. No more 
-one-liner. (The $\sim$ means "sampled from".)
+one-liner.
 
-
+`r insert_html_math()`
 \begin{align*}
    y_i &\sim \text{Normal}(\text{mean} = \mu_i, \text{SD} = \sigma) &\text{[likelihood]}
    \\
   \mu_i &= \alpha + \beta_1*x_{1i} &\text{[linear model]}
 \end{align*}
+`r insert_html_math()`
 
-
-. . . 
+`r insert_pause()` 
 
 Observation $y_i$ is a draw from a normal distribution
 centered around a mean $\mu_i$ with a standard deviation of $\sigma$.
@@ -1006,33 +928,27 @@ centered around a mean $\mu_i$ with a standard deviation of $\sigma$.
 The mean is a constant term $\alpha$ plus a linear combination of predictor
 variables (just $x_1$ for now).
 
-----
+`r insert_slide_break()`
 
 (These equations describe the same models. It's just a different kind of
 notation.)
 
-----
+`r insert_slide_break()`
 
 
 ## Weight by height model
 
 Consider a model of weight predicted by height... 
 
----
+`r insert_slide_break()`
 
 ```{r staggered-bell-curves, echo = FALSE, fig.cap = "It's like a tunnel of bell curves. The center of it moves with _x_.", message = FALSE, warning = FALSE}
-# options(hrbrthemes.loadfonts = TRUE)
-
-# Some toy data
-davis <- car::Davis %>%
-  filter(100 < height)
-
 # Fit a model and estimate mean at five points
 m <- lm(weight ~ height, davis)
 newdata <- data_frame(height = c(15:19 * 10))
 newdata$fit <- predict(m, newdata)
 
-# get density of random normal values
+# Get density of random normal values
 get_density_df <- function(mean, sd, steps) {
   ends <- qnorm(c(.001, .999), mean, sd)
   steps <- seq(ends[1], ends[2], length.out = steps)
@@ -1047,8 +963,7 @@ get_density_df <- function(mean, sd, steps) {
 simulated <- newdata %>%
   group_by(height) %>%
   do(get_density_df(.$fit, sigma(m), 10000)) %>%
-  ungroup
-
+  ungroup()
 
 ggplot(simulated) +
   # Plot at each mean, adding some scaled value of density to the mean.
@@ -1066,9 +981,9 @@ To make the model Bayesian, we need to give prior distributions to parameters.
 
 The parameters we need to estimate for regression: $\alpha, \beta_1, \sigma$. 
 
-. . .
+`r insert_pause()`
 
-
+`r insert_html_math()`
 \begin{align*}
    y_i &\sim \text{Normal}(\mu_i, \sigma) &\text{[likelihood]}
    \\
@@ -1077,6 +992,7 @@ The parameters we need to estimate for regression: $\alpha, \beta_1, \sigma$.
   \beta_1 &\sim \text{Normal}(0, 5) &\text{[prior for }\beta_1] \\ 
   \sigma &\sim \text{HalfCauchy}(0, 5) &\text{[prior for }\sigma] \\ 
 \end{align*}
+`r insert_html_math()`
 
 
 ## What's the point?
@@ -1088,16 +1004,13 @@ The parameters we need to estimate for regression: $\alpha, \beta_1, \sigma$.
 
 
 
-
-## But this is where things get difficult
-
+## But this is where things get difficult!
 
 Parameters we need to estimate: $\alpha, \beta_1, \sigma$
 
-
 $$ \mathrm{posterior} = \frac{ \mathrm{likelihood} * \mathrm{prior}}{\mathrm{average\ likelihood}} $$
 
-. . . 
+`r insert_pause()` 
 
 $$ P(\alpha, \beta, \sigma \mid x) = \frac{ P(x \mid \alpha, \beta, \sigma) \, P(\alpha, \beta, \sigma)}{\iiint \, P(x \mid \alpha, \beta, \sigma) \, P(\alpha, \beta, \sigma) \,d\alpha \,d\beta \,d\sigma} $$
 
@@ -1120,16 +1033,15 @@ Those samples will provide a detailed picture of the posterior.
 ## An example: Height and Weight by Sex
 
 ```{r, echo = TRUE}
-# Some toy data
-davis <- car::Davis %>% filter(100 < height) %>% as_data_frame()
 davis
 ```
 
---- 
+`r insert_slide_break()` 
 
 ## Classical linear model
 
 ```{r, echo = TRUE}
+# Mean-center height
 mean(davis$height)
 davis$heightC <- davis$height - mean(davis$height)
 
@@ -1151,7 +1063,7 @@ RStanARM: RStan Applied Regression Modeling
 - Proper successor to the `arm` package.
 
 
----
+`r insert_slide_break()`
 
 ```{r, echo = TRUE}
 library(rstanarm)
@@ -1160,27 +1072,26 @@ library(rstanarm)
 * So... hard-code the priors.
 
 
-
-
-
 ## Fit the model
 
 We have to use `stan_glm()`.
 
 * `stan_lm()` uses a different specification of the prior.
 
-By default, it does sampling with 4 MCMC chains.
+By default, it does sampling with 4 MCMC chains. Each "chain" explores the
+posterior distribution from random starting locations.
 
 * Each chain is 2000 samples, but the first half are warm-up samples.
 * Warm-up samples are ignored
 
-----
+`r insert_slide_break()`
 
 ```{r stan-davis, echo = TRUE, cache = FALSE}
 stan_model <- stan_glm(
   weight ~ heightC * sex,
   data = davis,
   family = gaussian,
+  # RStanARM rescales predictor variables and priors use that scaling
   prior = normal(0, 5),
   prior_intercept = normal(0, 10)
 )
@@ -1225,15 +1136,7 @@ summary(stan_model)
 
 Here is what classical linear regression does.
 
-```{r}
-ggplot(davis) + 
-  aes(x = heightC, y = weight, color = sex) + 
-  geom_point(alpha = .5) + 
-  stat_smooth(method = "lm", se = FALSE)
-```
-
-
-```{r}
+```{r classical-interaction}
 part1 <- davis %>% 
   filter(sex == "M") %>% 
   modelr::data_grid(heightC) %>% 
@@ -1247,46 +1150,48 @@ part2 <- davis %>%
 grid <- bind_rows(part1, part2)
 grid$Point <- seq_len(nrow(grid))
 
-done <- posterior_linpred(stan_model, newdata = grid, draws = 200) 
+grid2 <- grid
+grid2$pred <- predict(m, grid2)
 
-long <- done %>%
+ggplot(davis) + 
+  aes(x = heightC + mean(davis$height), y = weight, color = sex) + 
+  geom_point(alpha = .5) + 
+  geom_line(aes(y = pred, group = sex), data = grid2, size = 1.5) + 
+  labs(x = "height (cm)", y = "weight (kg)")
+```
+
+## Here is what Bayesian linear regression does
+
+```{r bayesian-interaction, message = FALSE}
+raw_linpreds <- posterior_linpred(stan_model, newdata = grid) 
+
+# Sample some lines
+linpreds <- raw_linpreds %>%
   as_data_frame() %>% 
   sample_n(100) %>% 
   as.matrix() %>% 
   reshape2::melt(varnames = c("Draw", "Point")) %>% 
   left_join(grid)
 
-
-# df_model <- stan_model %>% as_data_frame()
-# df_model
-# 
-# df_model2 <- df_model %>%
-#   mutate(F_Intercept = `(Intercept)`, F_Slope = heightC,
-#          M_Intercept = `(Intercept)` + sexM,
-#          M_Slope = heightC + `heightC:sexM`) %>%
-#   select(F_Intercept:M_Slope)
-# df_model2
-
-# 
-# fits <- sample_n(df_model2, 200)
-# medians <- df_model2 %>% summarise_each(funs = funs(median))
-
-p2 <- ggplot(long) +
-  aes(x = heightC, y = value, color = sex) + 
-  geom_line(aes(group = interaction(Draw, sex)), alpha = .1)
-p2
-  
+# Get medians
+medians <- raw_linpreds %>%
+  reshape2::melt(varnames = c("Draw", "Point")) %>% 
+  group_by(Point) %>% 
+  summarise(median = median(value)) %>% 
+  left_join(grid)
 
 
-```
-
+ggplot(davis) + 
+  aes(x = heightC + mean(davis$height), y = weight, color = sex) + 
+  geom_point(alpha = .5) + 
+  geom_line(aes(y = value, group = interaction(Draw, sex)), 
+            data = linpreds, alpha = .1) +
+  geom_line(aes(y = median, group = sex), data = medians, size = 1.5) + 
+  labs(x = "height (cm)", y = "weight (kg)")
 ```
 
 
 # Inspecting posterior samples
-
-
-
 
 ## Looking at the posterior parameter samples
 
@@ -1298,6 +1203,10 @@ samples
 ```
 
 
+## We have a distribution
+
+Any stats that can describe a distribution can describe the model's parameters now.
+Mean, median, skew, quantiles, etc.
 
 
 ## Looking at the posterior parameter samples
@@ -1310,9 +1219,6 @@ ggplot(samples) +
   ylab("N posterior samples")
 ```
 
-
-
-
 ## Quantiles are post-data probabilities
 
 If we believe there is a "true" value for a parameter, there is 90% 
@@ -1321,65 +1227,140 @@ prior information, and the data.
 
 The 90% interval contains the middle 90% of the parameter values.
 
-There is a 5% chance, says the model, the height parameter is below the 5% 
-quantile.
+There is a 5% chance, says the model, the height parameter that generated the
+data is below the 5% quantile.
 
 ```{r, echo = TRUE}
 posterior_interval(stan_model)
 ```
 
-
-<!-- ## ROPE -->
-
-<!-- ROPE: Region of practical equivalence. -->
-
-<!-- Let's say that the height effect is practically equivalent to 0 when it fall -->
-<!-- between -0.1 and 0.1. How many values are in this ROPE? -->
-
-<!-- ```{r} -->
-<!-- height_effects <- as.data.frame(stan_model)[["heightC"]] -->
-<!-- mean(-.1 <= height_effects & height_effects <= .1) -->
-<!-- ``` -->
-
-
-
-## Plotting the parameters
-
-Basic `plot()` method shows 80% and 95% intervals.
-
-```{r basic-parameter-plot, fig.cap = "Basic plot() called on model. Shows 80%, 95% intervals for each parameter."}
-plot(stan_model)
-```
-
-
 ## Live demo
 
-```{r}
-
+```{r, echo = TRUE}
+# This is where I toured launch_shinystan(stan_model) 
+# and did some other stuff.
 ```
 
+# My experience with this framework
 
-<!-- * * *  -->
+## Benefits
+
+The models provide intuitive results.
+
+- When we misinterpret _p_-values or confidence intervals, we usually are
+  interpreting them in a Bayesian way.
+- Bayesian uncertainty intervals are what we want from confidence intervals.
+
+`r insert_slide_break()`
+
+Bayesian models quantify uncertainty.
+
+- Basically, if a classical model can estimate or predict something about the 
+  data, the Bayesian model can estimate a distribution for that thing too.
+- Bayesian models are generative, and the posterior predictive distribution 
+  (which simulates fake data using the model) is a useful tool.
 
 
-<!-- ## Plotting some of the parameters -->
+`r insert_slide_break()`
 
-<!-- ```{r subset-of-parameters, fig.cap = "Basic plot() called on model. Shows 80%, 95% intervals. Limited to just parameters matching 'height'."} -->
-<!-- # Match a subset of the parameters -->
-<!-- plot(stan_model, regex_pars = "height")  -->
-<!-- ``` -->
+Bayesian models incorporate prior information.
 
-<!-- <!-- ## What is the predicted value for each sex? --> -->
+- That information can be weak, moderate or strong.
+- I don't say "prior beliefs" because that sounds too subjective.
+- All models make assumptions and prior information, and priors make that 
+  information explicit.
+ 
+`r insert_slide_break()`
+
+Bayesian models are flexible.
+
+- This course captures a bag of tricks (_t_-tests, ANOVA, ANCOVA, mixed 
+  effects) under a general framework (it's all regression).
+- Bayesian regression incorporates even more tricks (missing data imputation, 
+  measurement error models, robust error models) into the framework.
+
+`r insert_slide_break()`
+
+Bayesian models have computational benefits.
+
+- Multilevel models with lots of random effects probably won't converge.
+- But some weak prior information will nudge the models in the right direction 
+  and make the models work.
+
+## Downsides
+
+It's different.
+
+- People are really used to signficance testing and _p_-values, so you have to 
+  do more hand-holding when explaining results.
+- You don't get to say _significant_ anymore. (I use _plausible_ and 
+  _credible_.)
+- People have misconceptions about subjectivism and bias.
 
 
-<!-- <!-- ```{r} --> -->
-<!-- <!-- new_data <- davis --> -->
-<!-- <!-- ``` --> -->
+`r insert_slide_break()`
+
+More work before and after modeling.
+
+- You need to specify priors for your parameters. 
+- Your model is a distribution, so you have to do a bit more work wrangling 
+  the data.
+
+`r insert_slide_break()`
+
+It takes longer.
+
+- Classical models solve an optimization problem and provide a single set of 
+  parameter estimates. 
+- MCMC sampling explores the space of parameter values and provides thousands of 
+  parameter estimates.
+- It can take a few hours to fit a complicated multilevel model.
+
+`r insert_slide_break()`
+
+It's not a cure-all. There are still insecurities.
+
+- It's statistics and people can still misunderstand the methods and models. 
+- A motivated _p_-hacker can still exploit Bayes factors, which is why I won't
+  discuss them.
+
+
+
+## Learn more
+
+These are some older slides on good resources for learning about Bayesian
+statistics.
+
+https://cdn.rawgit.com/tjmahr/MadR_RStanARM/master/04-learning-more-rpubs.html
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+[replication-hacks]: http://www.sciencedirect.com/science/article/pii/S002210311600007X
+[method-terrorists]: http://andrewgelman.com/2016/09/21/what-has-happened-down-here-is-the-winds-have-changed/
+[everything-fucked]: https://hardsci.wordpress.com/2016/08/11/everything-is-fucked-the-syllabus/
+[repeat-after-me]: https://thenib.com/repeat-after-me
 [osf2015]: http://science.sciencemag.org/content/349/6251/aac4716
-
 [arm]: https://cran.rstudio.com/web/packages/arm/
+[rethinking]: http://xcelab.net/rm/statistical-rethinking/
+[brms]: https://cran.r-project.org/web/packages/brms/index.html
+[rstanarm]: https://cran.r-project.org/web/packages/rstanarm/index.html
+[we-r-bayesians]: https://thinkinator.com/2016/01/12/r-users-will-now-inevitably-become-bayesians/
+[math-ex-ll]: https://math.stackexchange.com/questions/892832/why-we-consider-log-likelihood-instead-of-likelihood-in-gaussian-distribution
+
+
+
 
