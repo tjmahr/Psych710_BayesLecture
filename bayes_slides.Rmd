@@ -3,9 +3,6 @@ title: "An introduction to Bayesian regression"
 author: "Tristan Mahr"
 date: "April 13, 2017"
 output:
-  html_document:
-    css: assets/github.css
-    mathjax: https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML
   beamer_presentation:
     includes:
       in_header: assets/header.txt
@@ -13,6 +10,7 @@ output:
     slide_level: 2
     theme: Metropolis
     toc: no
+  ghdown::github_html_document: default
 subtitle: Guest lecture for Psych 610/710 at UW--Madison
 ---
 
@@ -52,8 +50,6 @@ insert_pause <- make_latex_decorator(". . .", "\n")
 insert_slide_break <- make_latex_decorator("----", "\n")
 insert_inc_bullet <- make_latex_decorator("> *", "*")
 insert_html_math <- make_latex_decorator("", "$$")
-
-
 ```
 
 ## Online resources
@@ -1119,7 +1115,7 @@ prior_summary(stan_model)
 
 ## Getting a summary from the model
 
-```{r}
+```{r, echo = TRUE}
 summary(stan_model)
 ```
 
@@ -1249,7 +1245,8 @@ The models provide intuitive results.
 
 - When we misinterpret _p_-values or confidence intervals, we usually are
   interpreting them in a Bayesian way.
-- Bayesian uncertainty intervals are what we want from confidence intervals.
+- ...so Bayesian uncertainty intervals are what we want from 
+  confidence intervals.
 
 `r insert_slide_break()`
 
@@ -1267,15 +1264,15 @@ Bayesian models incorporate prior information.
 
 - That information can be weak, moderate or strong.
 - I don't say "prior beliefs" because that sounds too subjective.
-- All models make assumptions and prior information, and priors make that 
-  information explicit.
+- All models make assumptions and build on prior information, and priors 
+  make that information explicit.
  
 `r insert_slide_break()`
 
 Bayesian models are flexible.
 
 - This course captures a bag of tricks (_t_-tests, ANOVA, ANCOVA, mixed 
-  effects) under a general framework (it's all regression).
+  effects) under a general framework: it's all regression.
 - Bayesian regression incorporates even more tricks (missing data imputation, 
   measurement error models, robust error models) into the framework.
 
